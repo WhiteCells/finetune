@@ -1,0 +1,11 @@
+.venv/
+.uv-cache/
+__pycache__/
+*.py[cod]
+
+outputs/
+logs/
+runs/
+wandb/
+
+*.log

@@ -1,0 +1,5 @@
+{"instruction":"请用一句话解释 LoRA。","input":"","output":"LoRA 是一种通过训练低秩适配矩阵来高效微调大语言模型的方法。"}
+{"instruction":"把下面的话改写得更正式。","input":"这个方案挺靠谱，可以试试。","output":"该方案具备较高可行性，建议进一步验证并尝试实施。"}
+{"messages":[{"role":"system","content":"你是一个严谨的中文助手。"},{"role":"user","content":"什么是梯度累积？"},{"role":"assistant","content":"梯度累积是在多个 mini-batch 上累加梯度，再统一执行一次优化器更新的方法。"}]}
+{"conversations":[{"from":"human","value":"给我三个提升数据质量的建议。"},{"from":"gpt","value":"第一，删除重复和低质量样本；第二，统一标注规范；第三，抽样人工复核。"}]}
+
