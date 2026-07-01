@@ -5,7 +5,7 @@
 ## 1. 进入项目目录
 
 ```bash
-cd /home/cells/dev/model/qwen3-4B/finetune
+cd /home/cells/dev/model/qwen3-4B
 ```
 
 ## 2. 安装 uv
@@ -52,20 +52,20 @@ uv sync --extra deepspeed
 默认配置使用：
 
 ```text
-../models/Qwen3-4B-Instruct-2507
+./models/Qwen3-4B-Instruct-2507
 ```
 
 如果模型还没下载，可以运行：
 
 ```bash
 uv run python download_model.py \
-  --output-dir ../models/Qwen3-4B-Instruct-2507
+  --output-dir ./models/Qwen3-4B-Instruct-2507
 ```
 
 确认目录存在：
 
 ```bash
-ls -la ../models/Qwen3-4B-Instruct-2507
+ls -la ./models/Qwen3-4B-Instruct-2507
 ```
 
 至少应能看到 `config.json`、tokenizer 文件和模型权重文件。

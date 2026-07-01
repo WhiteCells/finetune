@@ -14,7 +14,7 @@ else
   PYTHON_CMD=(uv run python)
 fi
 
-MODEL_NAME_OR_PATH="${MODEL_NAME_OR_PATH:-../models/Qwen3-4B-Instruct-2507}"
+MODEL_NAME_OR_PATH="${MODEL_NAME_OR_PATH:-./models/Qwen3-4B-Instruct-2507}"
 ADAPTER_PATH="${ADAPTER_PATH:-outputs/qwen3-4b-lora}"
 PROMPT="${PROMPT:-请用一句话解释 LoRA。}"
 INPUT_TEXT="${INPUT_TEXT:-}"

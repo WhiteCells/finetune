@@ -20,7 +20,7 @@ bash scripts/infer.sh
 
 ```bash
 uv run python inference.py \
-  --model-name-or-path ../models/Qwen3-4B-Instruct-2507 \
+  --model-name-or-path ./models/Qwen3-4B-Instruct-2507 \
   --adapter-path outputs/qwen3-4b-lora \
   --prompt "请用一句话解释 LoRA。" \
   --max-new-tokens 256 \
@@ -34,7 +34,7 @@ uv run python inference.py \
 
 ```bash
 uv run python inference.py \
-  --model-name-or-path ../models/Qwen3-4B-Instruct-2507 \
+  --model-name-or-path ./models/Qwen3-4B-Instruct-2507 \
   --adapter-path outputs/qwen3-4b-lora \
   --prompt "请用一句话解释 LoRA。" \
   --max-new-tokens 128 \
@@ -55,7 +55,7 @@ OUTPUT_FILE=outputs/sample_answer.txt bash scripts/infer.sh
 
 ```bash
 uv run python inference.py \
-  --model-name-or-path ../models/Qwen3-4B-Instruct-2507 \
+  --model-name-or-path ./models/Qwen3-4B-Instruct-2507 \
   --adapter-path outputs/qwen3-4b-lora \
   --prompt "请用一句话解释 LoRA。" \
   --output-file outputs/sample_answer.txt
@@ -73,7 +73,7 @@ bash scripts/merge.sh
 
 ```bash
 uv run python merge_lora.py \
-  --model-name-or-path ../models/Qwen3-4B-Instruct-2507 \
+  --model-name-or-path ./models/Qwen3-4B-Instruct-2507 \
   --adapter-path outputs/qwen3-4b-lora \
   --output-dir outputs/qwen3-4b-merged
 ```

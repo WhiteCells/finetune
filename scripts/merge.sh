@@ -14,7 +14,7 @@ else
   PYTHON_CMD=(uv run python)
 fi
 
-MODEL_NAME_OR_PATH="${MODEL_NAME_OR_PATH:-../models/Qwen3-4B-Instruct-2507}"
+MODEL_NAME_OR_PATH="${MODEL_NAME_OR_PATH:-./models/Qwen3-4B-Instruct-2507}"
 ADAPTER_PATH="${ADAPTER_PATH:-outputs/qwen3-4b-lora}"
 OUTPUT_DIR="${OUTPUT_DIR:-outputs/qwen3-4b-merged}"
 TORCH_DTYPE="${TORCH_DTYPE:-bfloat16}"
