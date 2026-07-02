@@ -69,6 +69,8 @@ class InferenceHelperTests(unittest.TestCase):
             adapter_path = Path(temp_dir) / "adapter"
             model_path.mkdir()
             adapter_path.mkdir()
+            (adapter_path / "adapter_config.json").write_text("{}", encoding="utf-8")
+            (adapter_path / "adapter_model.safetensors").write_bytes(b"")
 
             args = self.make_args(
                 model_path=str(model_path),
@@ -78,6 +80,21 @@ class InferenceHelperTests(unittest.TestCase):
             )
 
             with self.assertRaisesRegex(ValueError, "temperature"):
+                validate_args(args)
+
+    def test_validate_args_rejects_incomplete_adapter_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            model_path = Path(temp_dir) / "base"
+            adapter_path = Path(temp_dir) / "adapter"
+            model_path.mkdir()
+            adapter_path.mkdir()
+
+            args = self.make_args(
+                model_path=str(model_path),
+                adapter_path=str(adapter_path),
+            )
+
+            with self.assertRaisesRegex(FileNotFoundError, "adapter_config.json"):
                 validate_args(args)
 
 

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import torch
 from transformers import AutoConfig
 from transformers import AutoModelForCausalLM
+from transformers import __version__ as transformers_version
 from transformers import PretrainedConfig
 from transformers import PreTrainedModel
 
@@ -67,6 +68,15 @@ def resolve_torch_dtype(dtype_name: str) -> torch.dtype | str:
     return SUPPORTED_DTYPES[normalized_dtype]
 
 
+def model_dtype_kwarg_name() -> str:
+    """返回当前 Transformers 版本推荐的模型 dtype 参数名。"""
+
+    major_version = int(transformers_version.split(".", maxsplit=1)[0])
+    if major_version >= 5:
+        return "dtype"
+    return "torch_dtype"
+
+
 def load_model_config(
     model_name_or_path: str,
     cache_dir: str | None = None,
@@ -114,7 +124,7 @@ def load_causal_lm(config: ModelLoadConfig) -> PreTrainedModel:
         "pretrained_model_name_or_path": config.model_name_or_path,
         "cache_dir": config.cache_dir,
         "trust_remote_code": config.trust_remote_code,
-        "torch_dtype": torch_dtype,
+        model_dtype_kwarg_name(): torch_dtype,
     }
     if config.attn_implementation:
         model_kwargs["attn_implementation"] = config.attn_implementation
@@ -138,7 +148,11 @@ def resize_token_embeddings_if_needed(
     model: PreTrainedModel,
     tokenizer_size: int,
 ) -> None:
-    """在 tokenizer 词表变化时同步调整 embedding 大小。
+    """在 tokenizer 词表大于模型 embedding 时同步扩容。
+
+    Qwen 等模型的配置词表可能包含预留槽位，常见表现是模型 embedding
+    大于 `len(tokenizer)`。这种情况下不能缩小 embedding，否则 PEFT 会把
+    embedding 视为训练中被 resize 并随 adapter 一起保存，显著放大产物体积。
 
     Args:
         model: 已加载模型。
@@ -150,7 +164,7 @@ def resize_token_embeddings_if_needed(
         return
 
     current_vocab_size = current_embeddings.num_embeddings
-    if tokenizer_size != current_vocab_size:
+    if tokenizer_size > current_vocab_size:
         model.resize_token_embeddings(tokenizer_size)
 
 

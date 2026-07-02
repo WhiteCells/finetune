@@ -21,6 +21,7 @@ from model.loader import load_causal_lm
 from model.loader import resize_token_embeddings_if_needed
 from model.loader import summarize_model
 from model.lora import load_lora_adapter
+from model.lora import validate_lora_adapter_path
 from model.tokenizer import TokenizerLoadConfig
 from model.tokenizer import TokenizerType
 from model.tokenizer import load_tokenizer
@@ -192,8 +193,7 @@ def validate_args(args: MergeArgs) -> None:
     if not Path(args.model_name_or_path).exists():
         raise FileNotFoundError(f"基础模型路径不存在: {args.model_name_or_path}")
 
-    if not Path(args.adapter_path).exists():
-        raise FileNotFoundError(f"LoRA adapter 路径不存在: {args.adapter_path}")
+    validate_lora_adapter_path(args.adapter_path)
 
     output_path = Path(args.output_dir)
     if output_path.resolve() == Path(args.adapter_path).resolve():

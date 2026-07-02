@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
@@ -51,7 +52,7 @@ class TrainConfig:
     num_train_epochs: float = 3.0
     max_steps: int = -1
     lr_scheduler_type: str = "cosine"
-    warmup_steps: int = 0
+    warmup_steps: int | float = 0
     warmup_ratio: float = 0.03
     logging_steps: int = 10
     save_steps: int = 200
@@ -158,6 +159,8 @@ def validate_train_config(config: TrainConfig) -> None:
         raise ValueError("`learning_rate` 必须大于 0。")
     if not 0 <= config.warmup_ratio <= 1:
         raise ValueError("`warmup_ratio` 必须在 [0, 1] 范围内。")
+    if config.warmup_steps < 0:
+        raise ValueError("`warmup_steps` 不能小于 0。")
     if config.logging_strategy == "steps" and config.logging_steps <= 0:
         raise ValueError("`logging_steps` 必须大于 0。")
     if config.save_strategy == "steps" and config.save_steps <= 0:
@@ -247,10 +250,14 @@ def build_training_arguments(
     evaluation_strategy = config.evaluation_strategy if has_eval_dataset else "no"
     load_best_model_at_end = config.load_best_model_at_end and has_eval_dataset
     eval_on_start = config.eval_on_start and has_eval_dataset
+    warmup_steps = config.warmup_steps
+    if warmup_steps == 0 and config.warmup_ratio > 0:
+        warmup_steps = config.warmup_ratio
+    if config.logging_dir:
+        os.environ["TENSORBOARD_LOGGING_DIR"] = config.logging_dir
 
     kwargs: dict[str, Any] = {
         "output_dir": config.output_dir,
-        "logging_dir": config.logging_dir,
         "per_device_train_batch_size": config.per_device_train_batch_size,
         "per_device_eval_batch_size": config.per_device_eval_batch_size,
         "gradient_accumulation_steps": config.gradient_accumulation_steps,
@@ -260,8 +267,7 @@ def build_training_arguments(
         "num_train_epochs": config.num_train_epochs,
         "max_steps": config.max_steps,
         "lr_scheduler_type": config.lr_scheduler_type,
-        "warmup_steps": config.warmup_steps,
-        "warmup_ratio": config.warmup_ratio,
+        "warmup_steps": warmup_steps,
         "logging_steps": config.logging_steps,
         "save_steps": config.save_steps,
         "eval_steps": config.eval_steps,

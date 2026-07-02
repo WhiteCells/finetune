@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import os
 import unittest
 
 try:
+    from trainer.trainer import build_training_arguments
     from trainer.trainer import TrainConfig
     from trainer.trainer import validate_train_config
 except ModuleNotFoundError as error:
     if error.name not in {"torch", "transformers", "peft", "yaml"}:
         raise
+    build_training_arguments = None  # type: ignore[assignment]
     TrainConfig = None  # type: ignore[assignment]
     validate_train_config = None  # type: ignore[assignment]
 
@@ -34,6 +37,57 @@ class TrainConfigTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "save_steps"):
             validate_train_config(config)
+
+    def test_rejects_negative_warmup_steps(self) -> None:
+        config = TrainConfig(
+            model_name_or_path="../models/Qwen3-4B-Instruct-2507",
+            train_file="data/example.jsonl",
+            warmup_steps=-1,
+        )
+
+        with self.assertRaisesRegex(ValueError, "warmup_steps"):
+            validate_train_config(config)
+
+    @unittest.skipUnless(build_training_arguments is not None, "需要安装项目依赖")
+    def test_maps_warmup_ratio_to_warmup_steps(self) -> None:
+        config = TrainConfig(
+            model_name_or_path="../models/Qwen3-4B-Instruct-2507",
+            train_file="data/example.jsonl",
+            bf16=False,
+            warmup_steps=0,
+            warmup_ratio=0.03,
+            report_to=[],
+        )
+
+        training_args = build_training_arguments(
+            config=config,
+            has_eval_dataset=False,
+        )
+
+        self.assertEqual(training_args.warmup_steps, 0.03)
+
+    @unittest.skipUnless(build_training_arguments is not None, "需要安装项目依赖")
+    def test_sets_tensorboard_logging_dir_environment(self) -> None:
+        original_logging_dir = os.environ.get("TENSORBOARD_LOGGING_DIR")
+        config = TrainConfig(
+            model_name_or_path="../models/Qwen3-4B-Instruct-2507",
+            train_file="data/example.jsonl",
+            bf16=False,
+            logging_dir="logs/test-run",
+            report_to=[],
+        )
+
+        try:
+            build_training_arguments(config=config, has_eval_dataset=False)
+            self.assertEqual(
+                os.environ.get("TENSORBOARD_LOGGING_DIR"),
+                "logs/test-run",
+            )
+        finally:
+            if original_logging_dir is None:
+                os.environ.pop("TENSORBOARD_LOGGING_DIR", None)
+            else:
+                os.environ["TENSORBOARD_LOGGING_DIR"] = original_logging_dir
 
 
 if __name__ == "__main__":

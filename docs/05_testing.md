@@ -84,7 +84,9 @@ PY
 ## 5. 源码语法检查
 
 ```bash
-uv run python -m compileall -q .
+uv run python -m compileall -q \
+  data model trainer utils tests \
+  train.py inference.py merge_lora.py download_model.py
 ```
 
 如果命令没有输出，说明 Python 文件语法层面通过。

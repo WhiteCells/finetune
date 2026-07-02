@@ -23,6 +23,12 @@ SUPPORTED_TASK_TYPES: dict[str, TaskType] = {
     "FEATURE_EXTRACTION": TaskType.FEATURE_EXTRACTION,
 }
 
+ADAPTER_CONFIG_FILENAME = "adapter_config.json"
+ADAPTER_WEIGHT_FILENAMES = (
+    "adapter_model.safetensors",
+    "adapter_model.bin",
+)
+
 
 @dataclass(slots=True)
 class LoRAConfigData:
@@ -167,6 +173,49 @@ def apply_lora_to_model(
     return lora_model
 
 
+def validate_lora_adapter_path(
+    adapter_path: str | Path,
+    require_weights: bool = True,
+) -> Path:
+    """校验 LoRA adapter 目录是否包含 PEFT 必需文件。
+
+    Args:
+        adapter_path: LoRA adapter 目录路径。
+        require_weights: 是否要求目录中存在 adapter 权重文件。
+
+    Returns:
+        Path: 解析后的 adapter 目录路径。
+
+    Raises:
+        FileNotFoundError: 路径不存在或缺少关键 adapter 文件时抛出。
+        NotADirectoryError: 路径存在但不是目录时抛出。
+    """
+
+    path = Path(adapter_path)
+    if not path.exists():
+        raise FileNotFoundError(f"LoRA adapter 路径不存在: {path}")
+    if not path.is_dir():
+        raise NotADirectoryError(f"LoRA adapter 路径不是目录: {path}")
+
+    config_path = path / ADAPTER_CONFIG_FILENAME
+    if not config_path.exists():
+        raise FileNotFoundError(
+            f"LoRA adapter 配置文件不存在: {config_path}。"
+            "请确认训练已成功完成，或传入 checkpoint/adapter 目录。"
+        )
+
+    if require_weights and not any(
+        (path / filename).exists()
+        for filename in ADAPTER_WEIGHT_FILENAMES
+    ):
+        expected_files = " 或 ".join(ADAPTER_WEIGHT_FILENAMES)
+        raise FileNotFoundError(
+            f"LoRA adapter 权重文件不存在: {path}，需要 {expected_files}。"
+        )
+
+    return path
+
+
 def load_lora_adapter(
     model: PreTrainedModel,
     adapter_path: str | Path,
@@ -183,12 +232,10 @@ def load_lora_adapter(
         PeftModel: 已加载 adapter 的 PEFT 模型。
 
     Raises:
-        FileNotFoundError: adapter 目录不存在时抛出。
+        FileNotFoundError: adapter 目录不存在或缺少关键文件时抛出。
     """
 
-    path = Path(adapter_path)
-    if not path.exists():
-        raise FileNotFoundError(f"LoRA adapter 路径不存在: {path}")
+    path = validate_lora_adapter_path(adapter_path)
 
     return PeftModel.from_pretrained(
         model=model,
