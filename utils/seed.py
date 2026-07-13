@@ -68,36 +68,3 @@ def seed_everything(
         torch.use_deterministic_algorithms(final_deterministic, warn_only=True)
 
     return seed
-
-
-def seed_worker(worker_id: int) -> None:
-    """为 DataLoader worker 设置随机种子。
-
-    该函数适合传给 `DataLoader(worker_init_fn=...)`，以保证多 worker
-    场景下 NumPy 和 Python `random` 的随机态可复现。
-
-    Args:
-        worker_id: worker 编号。函数内部不直接使用该值，但保留该参数以符合
-            `worker_init_fn` 调用约定。
-    """
-
-    del worker_id
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
-
-
-def build_torch_generator(seed: int) -> torch.Generator:
-    """构建带固定随机种子的 `torch.Generator`。
-
-    Args:
-        seed: 随机种子值。
-
-    Returns:
-        torch.Generator: 已设置随机种子的生成器实例。
-    """
-
-    generator = torch.Generator()
-    generator.manual_seed(seed)
-    return generator
-

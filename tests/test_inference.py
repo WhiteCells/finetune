@@ -5,15 +5,15 @@ import unittest
 from pathlib import Path
 
 try:
-    from inference import InferenceArgs
+    from inference import InferenceConfig
     from inference import build_generation_kwargs
-    from inference import validate_args
+    from inference import validate_config
 except ModuleNotFoundError as error:
     if error.name not in {"torch", "transformers", "peft", "yaml"}:
         raise
-    InferenceArgs = None  # type: ignore[assignment]
+    InferenceConfig = None  # type: ignore[assignment]
     build_generation_kwargs = None  # type: ignore[assignment]
-    validate_args = None  # type: ignore[assignment]
+    validate_config = None  # type: ignore[assignment]
 
 
 class FakeTokenizer:
@@ -21,7 +21,7 @@ class FakeTokenizer:
     eos_token_id = 1
 
 
-@unittest.skipUnless(InferenceArgs is not None, "需要安装项目依赖")
+@unittest.skipUnless(InferenceConfig is not None, "需要安装项目依赖")
 class InferenceHelperTests(unittest.TestCase):
     def make_args(
         self,
@@ -29,29 +29,15 @@ class InferenceHelperTests(unittest.TestCase):
         adapter_path: str = "adapter",
         do_sample: bool = False,
         temperature: float = 0.7,
-    ) -> InferenceArgs:
-        return InferenceArgs(
+    ) -> InferenceConfig:
+        return InferenceConfig(
             model_name_or_path=model_path,
             adapter_path=adapter_path,
             prompt="请用一句话解释 LoRA。",
-            input_text="",
-            system_prompt="你是一个助手。",
-            cache_dir=None,
-            trust_remote_code=True,
-            use_fast_tokenizer=True,
-            torch_dtype="bfloat16",
-            attn_implementation="sdpa",
-            device_map="auto",
             max_new_tokens=64,
             temperature=temperature,
             top_p=0.9,
-            top_k=50,
-            repetition_penalty=1.0,
             do_sample=do_sample,
-            num_beams=1,
-            seed=None,
-            output_file=None,
-            log_level="INFO",
         )
 
     def test_generation_kwargs_omit_sampling_fields_when_sampling_disabled(self) -> None:
@@ -63,7 +49,7 @@ class InferenceHelperTests(unittest.TestCase):
         self.assertNotIn("top_p", generation_kwargs)
         self.assertNotIn("top_k", generation_kwargs)
 
-    def test_validate_args_rejects_zero_temperature_when_sampling(self) -> None:
+    def test_validate_config_rejects_zero_temperature_when_sampling(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             model_path = Path(temp_dir) / "base"
             adapter_path = Path(temp_dir) / "adapter"
@@ -80,9 +66,9 @@ class InferenceHelperTests(unittest.TestCase):
             )
 
             with self.assertRaisesRegex(ValueError, "temperature"):
-                validate_args(args)
+                validate_config(args)
 
-    def test_validate_args_rejects_incomplete_adapter_directory(self) -> None:
+    def test_validate_config_rejects_incomplete_adapter_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             model_path = Path(temp_dir) / "base"
             adapter_path = Path(temp_dir) / "adapter"
@@ -95,7 +81,7 @@ class InferenceHelperTests(unittest.TestCase):
             )
 
             with self.assertRaisesRegex(FileNotFoundError, "adapter_config.json"):
-                validate_args(args)
+                validate_config(args)
 
 
 if __name__ == "__main__":

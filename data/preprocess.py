@@ -27,7 +27,6 @@ JSON/JSONL 数据统一转换为训练阶段可直接消费的 JSONL 格式。
 
 from __future__ import annotations
 
-import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -56,8 +55,8 @@ ROLE_MAPPING: dict[str, str] = {
 
 
 @dataclass(slots=True)
-class PreprocessArgs:
-    """命令行参数数据类。
+class PreprocessConfig:
+    """预处理配置。
 
     Attributes:
         input_path: 原始输入数据文件路径，支持 `.json` 和 `.jsonl`。
@@ -99,65 +98,13 @@ class PreprocessError(ValueError):
     """数据预处理异常。"""
 
 
-def parse_args() -> PreprocessArgs:
-    """解析命令行参数。
-
-    Returns:
-        PreprocessArgs: 结构化命令行参数。
-    """
-
-    parser = argparse.ArgumentParser(
-        description="将 Alpaca、ShareGPT、messages 或自定义数据转换为统一 JSONL。"
-    )
-    parser.add_argument(
-        "--input",
-        required=True,
-        dest="input_path",
-        help="输入数据文件路径，支持 .json 或 .jsonl。",
-    )
-    parser.add_argument(
-        "--output",
-        required=True,
-        dest="output_path",
-        help="输出 JSONL 文件路径。",
-    )
-    parser.add_argument(
-        "--format",
-        default="auto",
-        choices=SUPPORTED_FORMATS,
-        dest="input_format",
-        help="输入数据格式，默认 auto 自动识别。",
-    )
-    parser.add_argument(
-        "--system-prompt",
-        default="",
-        help="如非空，则在样本最前面补一个 system 消息。",
-    )
-    parser.add_argument(
-        "--skip-invalid",
-        action="store_true",
-        help="遇到坏样本时跳过，而不是直接退出。",
-    )
-    parser.add_argument(
-        "--deduplicate",
-        action="store_true",
-        help="对标准化后的样本做内容去重。",
-    )
-    parser.add_argument(
-        "--ensure-ascii",
-        action="store_true",
-        help="输出 JSONL 时将非 ASCII 字符转义。",
-    )
-    namespace = parser.parse_args()
-    return PreprocessArgs(
-        input_path=Path(namespace.input_path),
-        output_path=Path(namespace.output_path),
-        input_format=namespace.input_format,
-        system_prompt=namespace.system_prompt.strip(),
-        skip_invalid=namespace.skip_invalid,
-        deduplicate=namespace.deduplicate,
-        ensure_ascii=namespace.ensure_ascii,
-    )
+INPUT_PATH = Path("data/example.jsonl")
+OUTPUT_PATH = Path("data/train.jsonl")
+INPUT_FORMAT = "auto"
+SYSTEM_PROMPT = ""
+SKIP_INVALID = True
+DEDUPLICATE = True
+ENSURE_ASCII = False
 
 
 def load_records(input_path: Path) -> list[dict[str, Any]]:
@@ -266,13 +213,13 @@ def load_json_records(input_path: Path) -> list[dict[str, Any]]:
 
 def normalize_records(
     records: Sequence[dict[str, Any]],
-    args: PreprocessArgs,
+    config: PreprocessConfig,
 ) -> tuple[list[dict[str, Any]], PreprocessStats]:
     """将原始样本标准化为统一 messages 结构。
 
     Args:
         records: 原始样本序列。
-        args: 预处理参数。
+        config: 预处理配置。
 
     Returns:
         tuple[list[dict[str, Any]], PreprocessStats]:
@@ -288,11 +235,11 @@ def normalize_records(
         try:
             normalized = normalize_record(
                 record=record,
-                input_format=args.input_format,
-                system_prompt=args.system_prompt,
+                input_format=config.input_format,
+                system_prompt=config.system_prompt,
             )
 
-            if args.deduplicate:
+            if config.deduplicate:
                 serialized = stable_serialize(normalized)
                 if serialized in seen_serialized:
                     stats.duplicate_records += 1
@@ -302,7 +249,7 @@ def normalize_records(
             normalized_records.append(normalized)
             stats.written_records += 1
         except PreprocessError as error:
-            if not args.skip_invalid:
+            if not config.skip_invalid:
                 raise
             stats.skipped_records += 1
             print(f"[WARN] 跳过第 {index + 1} 条坏样本: {error}")
@@ -381,7 +328,7 @@ def detect_format(record: dict[str, Any]) -> str:
     if {"input", "output"}.issubset(record.keys()):
         return "custom"
 
-    raise PreprocessError("无法自动识别样本格式，请显式传入 --format。")
+    raise PreprocessError("无法自动识别样本格式，请修改 INPUT_FORMAT 后重试。")
 
 
 def normalize_alpaca_record(record: dict[str, Any]) -> list[dict[str, str]]:
@@ -656,20 +603,33 @@ def main() -> None:
 
     处理流程：
 
-    1. 解析命令行参数。
-    2. 读取原始数据。
-    3. 转换为统一 messages 结构。
-    4. 写出 JSONL。
-    5. 打印统计信息和预览样本。
+    修改本文件顶部的路径和选项后直接运行本脚本。
     """
 
-    args = parse_args()
-    raw_records = load_records(args.input_path)
-    normalized_records, stats = normalize_records(records=raw_records, args=args)
+    config = PreprocessConfig(
+        input_path=INPUT_PATH,
+        output_path=OUTPUT_PATH,
+        input_format=INPUT_FORMAT,
+        system_prompt=SYSTEM_PROMPT,
+        skip_invalid=SKIP_INVALID,
+        deduplicate=DEDUPLICATE,
+        ensure_ascii=ENSURE_ASCII,
+    )
+    run_preprocess(config)
+
+
+def run_preprocess(config: PreprocessConfig) -> PreprocessStats:
+    """执行数据预处理并返回统计信息。"""
+
+    raw_records = load_records(config.input_path)
+    normalized_records, stats = normalize_records(
+        records=raw_records,
+        config=config,
+    )
     write_jsonl(
-        output_path=args.output_path,
+        output_path=config.output_path,
         records=normalized_records,
-        ensure_ascii=args.ensure_ascii,
+        ensure_ascii=config.ensure_ascii,
     )
 
     print("[INFO] 预处理完成。")
@@ -677,11 +637,13 @@ def main() -> None:
     print(f"[INFO] 写出样本数: {stats.written_records}")
     print(f"[INFO] 跳过样本数: {stats.skipped_records}")
     print(f"[INFO] 去重丢弃数: {stats.duplicate_records}")
-    print(f"[INFO] 输出文件: {args.output_path}")
+    print(f"[INFO] 输出文件: {config.output_path}")
 
     for index, preview in enumerate(iter_preview(normalized_records), start=1):
         print(f"[INFO] 预览样本 {index}:")
         print(preview)
+
+    return stats
 
 
 if __name__ == "__main__":

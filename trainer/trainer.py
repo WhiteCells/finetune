@@ -73,7 +73,6 @@ class TrainConfig:
     remove_unused_columns: bool = False
     report_to: list[str] = field(default_factory=lambda: ["tensorboard"])
     run_name: str = "qwen3-4b-lora"
-    deepspeed: str | None = None
     resume_from_checkpoint: str | None = None
     adapter_path: str | None = None
     seed: int = 42
@@ -87,15 +86,22 @@ class LoRATrainer(Trainer):
     - 对训练与评估日志自动补充 perplexity。
     """
 
-    def log(self, logs: dict[str, float]) -> None:
+    def log(
+        self,
+        logs: dict[str, float],
+        *args: object,
+        **kwargs: object,
+    ) -> None:
         """在原始日志基础上自动补充 perplexity 后再写入。
 
         Args:
             logs: Trainer 产生的日志字典。
+            *args: 不同 Transformers 版本传入的额外日志参数。
+            **kwargs: 不同 Transformers 版本传入的额外日志参数。
         """
 
         enriched_logs = enrich_metrics_with_perplexity(logs)
-        super().log(enriched_logs)
+        super().log(enriched_logs, *args, **kwargs)
 
 
 def load_train_config(config_path: str | Path) -> TrainConfig:
@@ -285,7 +291,6 @@ def build_training_arguments(
         "remove_unused_columns": config.remove_unused_columns,
         "report_to": config.report_to,
         "run_name": config.run_name,
-        "deepspeed": config.deepspeed,
         "seed": config.seed,
         "eval_on_start": eval_on_start,
         "save_safetensors": True,

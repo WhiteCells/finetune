@@ -1,0 +1,7 @@
+{"instruction":"say hello","input":"","output":"hello"}
+{"instruction":"answer the color","input":"sky","output":"blue"}
+{"instruction":"what is lora","input":"","output":"lora is a small adapter"}
+{"instruction":"give a short reply","input":"thanks","output":"you are welcome"}
+{"instruction":"answer with yes","input":"","output":"yes"}
+{"instruction":"say hello","input":"","output":"hello"}
+{"instruction":"broken sample"}

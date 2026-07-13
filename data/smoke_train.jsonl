@@ -1,0 +1,5 @@
+{"messages":[{"role":"user","content":"say hello"},{"role":"assistant","content":"hello"}]}
+{"messages":[{"role":"user","content":"answer the color\n\nsky"},{"role":"assistant","content":"blue"}]}
+{"messages":[{"role":"user","content":"what is lora"},{"role":"assistant","content":"lora is a small adapter"}]}
+{"messages":[{"role":"user","content":"give a short reply\n\nthanks"},{"role":"assistant","content":"you are welcome"}]}
+{"messages":[{"role":"user","content":"answer with yes"},{"role":"assistant","content":"yes"}]}

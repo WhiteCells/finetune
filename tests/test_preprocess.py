@@ -3,19 +3,15 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from data.preprocess import PreprocessArgs
+from data.preprocess import PreprocessConfig
 from data.preprocess import detect_format
 from data.preprocess import normalize_record
 from data.preprocess import normalize_records
-
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
+from data.preprocess import run_preprocess
 
 
 class PreprocessTests(unittest.TestCase):
@@ -65,7 +61,7 @@ class PreprocessTests(unittest.TestCase):
         self.assertEqual(normalized["messages"][2]["role"], "assistant")
 
     def test_skip_invalid_records_reports_reason(self) -> None:
-        args = PreprocessArgs(
+        config = PreprocessConfig(
             input_path=Path("unused.jsonl"),
             output_path=Path("unused.out.jsonl"),
             input_format="auto",
@@ -82,7 +78,7 @@ class PreprocessTests(unittest.TestCase):
                     {"instruction": "解释 LoRA", "output": "参数高效微调方法。"},
                     {"instruction": "缺少答案"},
                 ],
-                args=args,
+                config=config,
             )
 
         self.assertEqual(len(records), 1)
@@ -92,7 +88,7 @@ class PreprocessTests(unittest.TestCase):
         self.assertIn("跳过第 2 条坏样本", stdout.getvalue())
         self.assertIn("无法自动识别样本格式", stdout.getvalue())
 
-    def test_cli_preprocess_deduplicates_and_skips_invalid(self) -> None:
+    def test_preprocess_deduplicates_and_skips_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             input_path = temp_path / "raw.jsonl"
@@ -114,30 +110,25 @@ class PreprocessTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "data/preprocess.py",
-                    "--input",
-                    str(input_path),
-                    "--output",
-                    str(output_path),
-                    "--format",
-                    "auto",
-                    "--skip-invalid",
-                    "--deduplicate",
-                ],
-                cwd=ROOT_DIR,
-                check=True,
-                capture_output=True,
-                text=True,
+            config = PreprocessConfig(
+                input_path=input_path,
+                output_path=output_path,
+                input_format="auto",
+                system_prompt="",
+                skip_invalid=True,
+                deduplicate=True,
+                ensure_ascii=False,
             )
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                stats = run_preprocess(config)
 
             output_lines = output_path.read_text(encoding="utf-8").strip().splitlines()
             self.assertEqual(len(output_lines), 1)
-            self.assertIn("写出样本数: 1", result.stdout)
-            self.assertIn("跳过样本数: 1", result.stdout)
-            self.assertIn("去重丢弃数: 1", result.stdout)
+            self.assertEqual(stats.written_records, 1)
+            self.assertEqual(stats.skipped_records, 1)
+            self.assertEqual(stats.duplicate_records, 1)
+            self.assertIn("写出样本数: 1", stdout.getvalue())
 
 
 if __name__ == "__main__":

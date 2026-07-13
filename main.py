@@ -1,17 +1,17 @@
-import sys
 from pathlib import Path
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-MODEL_PATH = Path("models/Qwen3-4B-Instruct-2507")
+# MODEL_PATH = Path("models/Qwen3-4B-Instruct-2507")
+# MODEL_PATH = Path("models/Qwen3-4B-Instruct-2507-FP8")
+MODEL_PATH = Path("models/Qwen3.5-2B")
 PROMPT = "请用三句话解释什么是 LoRA。"
 
 
 def main() -> None:
-    # 可通过第一个命令行参数指定其他本地模型目录。
-    model_path = Path(sys.argv[1]) if len(sys.argv) > 1 else MODEL_PATH
+    model_path = MODEL_PATH
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(

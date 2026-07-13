@@ -11,12 +11,8 @@ from typing import Any
 from typing import Mapping
 
 import yaml
-from peft import PeftModel
 from transformers import PreTrainedModel
 from transformers import PreTrainedTokenizerBase
-
-
-ModelType = PeftModel | PreTrainedModel
 
 
 def ensure_directory(path: str | Path) -> Path:
@@ -236,81 +232,8 @@ def save_tokenizer(
     return output_path
 
 
-def save_lora_adapter(
-    model: ModelType,
-    output_dir: str | Path,
-    safe_serialization: bool = True,
-) -> Path:
-    """保存 LoRA adapter 或模型权重。
-
-    Args:
-        model: 需要保存的模型对象。
-        output_dir: 输出目录。
-        safe_serialization: 是否使用 safetensors 格式保存。
-
-    Returns:
-        Path: 模型保存目录。
-    """
-
-    output_path = ensure_directory(output_dir)
-    model.save_pretrained(
-        save_directory=str(output_path),
-        safe_serialization=safe_serialization,
-    )
-    return output_path
-
-
-def save_training_artifacts(
-    model: ModelType,
-    tokenizer: PreTrainedTokenizerBase,
-    output_dir: str | Path,
-    train_config: Any,
-    lora_config: Any,
-    train_config_source: str | Path | None = None,
-    lora_config_source: str | Path | None = None,
-) -> dict[str, str | None]:
-    """统一保存训练产物。
-
-    保存内容包括：
-
-    - LoRA adapter 或模型权重
-    - tokenizer
-    - 配置快照
-
-    Args:
-        model: 需要保存的模型对象。
-        tokenizer: tokenizer 实例。
-        output_dir: 统一输出目录。
-        train_config: 训练配置对象或字典。
-        lora_config: LoRA 配置对象或字典。
-        train_config_source: 原始训练配置文件路径。
-        lora_config_source: 原始 LoRA 配置文件路径。
-
-    Returns:
-        dict[str, str | None]: 保存结果摘要。
-    """
-
-    output_path = ensure_directory(output_dir)
-    model_dir = save_lora_adapter(model=model, output_dir=output_path)
-    tokenizer_dir = save_tokenizer(tokenizer=tokenizer, output_dir=output_path)
-    config_snapshot_paths = save_config_snapshots(
-        output_dir=output_path,
-        train_config=train_config,
-        lora_config=lora_config,
-        train_config_source=train_config_source,
-        lora_config_source=lora_config_source,
-    )
-
-    result: dict[str, str | None] = {
-        "model_dir": str(model_dir),
-        "tokenizer_dir": str(tokenizer_dir),
-    }
-    result.update(config_snapshot_paths)
-    return result
-
-
 def save_full_model(
-    model: ModelType,
+    model: PreTrainedModel,
     tokenizer: PreTrainedTokenizerBase,
     output_dir: str | Path,
     safe_serialization: bool = True,

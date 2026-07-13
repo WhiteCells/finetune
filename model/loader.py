@@ -5,10 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import torch
-from transformers import AutoConfig
 from transformers import AutoModelForCausalLM
 from transformers import __version__ as transformers_version
-from transformers import PretrainedConfig
 from transformers import PreTrainedModel
 
 
@@ -75,29 +73,6 @@ def model_dtype_kwarg_name() -> str:
     if major_version >= 5:
         return "dtype"
     return "torch_dtype"
-
-
-def load_model_config(
-    model_name_or_path: str,
-    cache_dir: str | None = None,
-    trust_remote_code: bool = True,
-) -> PretrainedConfig:
-    """加载基础模型配置。
-
-    Args:
-        model_name_or_path: 基座模型路径或名称。
-        cache_dir: 可选缓存目录。
-        trust_remote_code: 是否信任远程自定义代码。
-
-    Returns:
-        PretrainedConfig: 模型配置对象。
-    """
-
-    return AutoConfig.from_pretrained(
-        pretrained_model_name_or_path=model_name_or_path,
-        cache_dir=cache_dir,
-        trust_remote_code=trust_remote_code,
-    )
 
 
 def load_causal_lm(config: ModelLoadConfig) -> PreTrainedModel:

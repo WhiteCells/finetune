@@ -1,22 +1,35 @@
 from __future__ import annotations
 
 import os
+import inspect
 import unittest
 
 try:
     from trainer.trainer import build_training_arguments
+    from trainer.trainer import LoRATrainer
     from trainer.trainer import TrainConfig
     from trainer.trainer import validate_train_config
 except ModuleNotFoundError as error:
     if error.name not in {"torch", "transformers", "peft", "yaml"}:
         raise
     build_training_arguments = None  # type: ignore[assignment]
+    LoRATrainer = None  # type: ignore[assignment]
     TrainConfig = None  # type: ignore[assignment]
     validate_train_config = None  # type: ignore[assignment]
 
 
 @unittest.skipUnless(TrainConfig is not None, "需要安装项目依赖")
 class TrainConfigTests(unittest.TestCase):
+    def test_trainer_log_accepts_newer_transformers_extra_arguments(self) -> None:
+        signature = inspect.signature(LoRATrainer.log)
+        parameter_kinds = {
+            parameter.kind
+            for parameter in signature.parameters.values()
+        }
+
+        self.assertIn(inspect.Parameter.VAR_POSITIONAL, parameter_kinds)
+        self.assertIn(inspect.Parameter.VAR_KEYWORD, parameter_kinds)
+
     def test_rejects_invalid_warmup_ratio(self) -> None:
         config = TrainConfig(
             model_name_or_path="../models/Qwen3-4B-Instruct-2507",

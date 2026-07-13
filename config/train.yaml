@@ -41,8 +41,6 @@ remove_unused_columns: false
 report_to:
   - "tensorboard"
 run_name: "qwen3-4b-lora"
-deepspeed: null
 resume_from_checkpoint: null
 adapter_path: null
 seed: 42
-

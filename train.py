@@ -3,12 +3,9 @@
 
 from __future__ import annotations
 
-import argparse
 import sys
 from dataclasses import asdict
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
 import peft
 import torch
@@ -43,91 +40,16 @@ from utils.seed import SeedConfig
 from utils.seed import seed_everything
 
 
-@dataclass(slots=True)
-class CLIArgs:
-    """命令行参数。
-
-    Attributes:
-        train_config: 训练配置文件路径。
-        lora_config: LoRA 配置文件路径。
-        resume_from_checkpoint: 可选断点续训路径，优先级高于 YAML 配置。
-        adapter_path: 可选已有 LoRA adapter 路径，优先级高于 YAML 配置。
-        log_level: 日志级别。
-        local_rank: 分布式训练保留参数，供 `torchrun` 或部分启动器透传。
-    """
-
-    train_config: str
-    lora_config: str
-    resume_from_checkpoint: str | None
-    adapter_path: str | None
-    log_level: str
-    local_rank: int
+TRAIN_CONFIG_PATH = Path("config/train.yaml")
+LORA_CONFIG_PATH = Path("config/lora.yaml")
+LOG_LEVEL = "INFO"
 
 
-def parse_args(argv: Sequence[str] | None = None) -> tuple[CLIArgs, list[str]]:
-    """解析命令行参数。
-
-    Args:
-        argv: 可选参数序列；为空时默认读取命令行。
-
-    Returns:
-        tuple[CLIArgs, list[str]]:
-            - 结构化命令行参数
-            - 未识别参数列表
-    """
-
-    parser = argparse.ArgumentParser(description="Qwen3-4B LoRA 微调主训练脚本。")
-    parser.add_argument(
-        "--train-config",
-        default="config/train.yaml",
-        help="训练配置文件路径，默认 `config/train.yaml`。",
-    )
-    parser.add_argument(
-        "--lora-config",
-        default="config/lora.yaml",
-        help="LoRA 配置文件路径，默认 `config/lora.yaml`。",
-    )
-    parser.add_argument(
-        "--resume-from-checkpoint",
-        default=None,
-        help="断点续训 checkpoint 路径，优先级高于 YAML 配置。",
-    )
-    parser.add_argument(
-        "--adapter-path",
-        default=None,
-        help="已有 LoRA adapter 路径，用于继续训练或以旧 adapter 初始化训练。",
-    )
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        help="日志级别，如 INFO、DEBUG、WARNING。",
-    )
-    parser.add_argument(
-        "--local-rank",
-        default=-1,
-        type=int,
-        help="分布式训练保留参数，可忽略。",
-    )
-
-    namespace, unknown_args = parser.parse_known_args(argv)
-    cli_args = CLIArgs(
-        train_config=namespace.train_config,
-        lora_config=namespace.lora_config,
-        resume_from_checkpoint=namespace.resume_from_checkpoint,
-        adapter_path=namespace.adapter_path,
-        log_level=namespace.log_level,
-        local_rank=namespace.local_rank,
-    )
-    return cli_args, list(unknown_args)
-
-
-def initialize_logger(output_dir: str, log_level: str) -> tuple[Path, object]:
+def initialize_logger(output_dir: str) -> tuple[Path, object]:
     """初始化日志目录与 logger。
 
     Args:
         output_dir: 训练输出目录。
-        log_level: 日志级别。
-
     Returns:
         tuple[Path, object]:
             - 输出目录路径
@@ -138,39 +60,13 @@ def initialize_logger(output_dir: str, log_level: str) -> tuple[Path, object]:
     logger = setup_logger(
         LoggerConfig(
             name="qwen3-finetune.train",
-            level=log_level,
+            level=LOG_LEVEL,
             log_file=str(output_path / "train.log"),
             console=True,
             propagate=False,
         )
     )
     return output_path, logger
-
-
-def resolve_runtime_overrides(
-    cli_args: CLIArgs,
-) -> tuple[object, object]:
-    """加载配置并应用命令行覆盖项。
-
-    Args:
-        cli_args: 命令行参数。
-
-    Returns:
-        tuple[object, object]:
-            - 训练配置对象
-            - LoRA 配置对象
-    """
-
-    train_config = load_train_config(cli_args.train_config)
-    lora_config = load_lora_config(cli_args.lora_config)
-
-    # 命令行参数优先级高于 YAML，便于快速试验和断点续训。
-    if cli_args.resume_from_checkpoint:
-        train_config.resume_from_checkpoint = cli_args.resume_from_checkpoint
-    if cli_args.adapter_path:
-        train_config.adapter_path = cli_args.adapter_path
-
-    return train_config, lora_config
 
 
 def log_environment(logger: object) -> None:
@@ -299,21 +195,14 @@ def save_pre_training_metadata(
 def train() -> None:
     """执行完整的 LoRA 训练流程。"""
 
-    cli_args, unknown_args = parse_args()
-    train_config, lora_config = resolve_runtime_overrides(cli_args)
+    train_config = load_train_config(TRAIN_CONFIG_PATH)
+    lora_config = load_lora_config(LORA_CONFIG_PATH)
     validate_runtime_paths(train_config)
 
-    output_dir, logger = initialize_logger(
-        output_dir=train_config.output_dir,
-        log_level=cli_args.log_level,
-    )
-
-    if unknown_args:
-        logger.warning("检测到未识别参数，将忽略: %s", " ".join(unknown_args))
+    output_dir, logger = initialize_logger(output_dir=train_config.output_dir)
 
     log_section(logger, "启动训练")
     log_environment(logger)
-    log_kv(logger, "命令行参数", asdict(cli_args))
     log_kv(logger, "训练配置", train_config_to_dict(train_config))
     log_kv(logger, "LoRA 配置", summarize_lora_config(lora_config))
 
@@ -385,8 +274,8 @@ def train() -> None:
         output_dir=output_dir,
         train_config=train_config,
         lora_config=lora_config,
-        train_config_path=cli_args.train_config,
-        lora_config_path=cli_args.lora_config,
+        train_config_path=TRAIN_CONFIG_PATH,
+        lora_config_path=LORA_CONFIG_PATH,
         logger=logger,
     )
 
