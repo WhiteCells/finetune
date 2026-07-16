@@ -40,6 +40,16 @@ class TrainConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "warmup_ratio"):
             validate_train_config(config)
 
+    def test_rejects_negative_gpu_id(self) -> None:
+        config = TrainConfig(
+            model_name_or_path="../models/Qwen3-4B-Instruct-2507",
+            train_file="data/example.jsonl",
+            gpu_id=-1,
+        )
+
+        with self.assertRaisesRegex(ValueError, "gpu_id"):
+            validate_train_config(config)
+
     def test_rejects_step_strategy_with_zero_save_steps(self) -> None:
         config = TrainConfig(
             model_name_or_path="../models/Qwen3-4B-Instruct-2507",

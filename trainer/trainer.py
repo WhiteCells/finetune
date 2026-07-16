@@ -43,6 +43,7 @@ class TrainConfig:
     trust_remote_code: bool = True
     attn_implementation: str | None = "sdpa"
     torch_dtype: str = "bfloat16"
+    gpu_id: int | None = 0
     per_device_train_batch_size: int = 1
     per_device_eval_batch_size: int = 1
     gradient_accumulation_steps: int = 8
@@ -157,6 +158,8 @@ def validate_train_config(config: TrainConfig) -> None:
         raise ValueError("`fp16` 与 `bf16` 不能同时为 true。")
     if config.max_length <= 0:
         raise ValueError("`max_length` 必须大于 0。")
+    if config.gpu_id is not None and config.gpu_id < 0:
+        raise ValueError("`gpu_id` 必须为非负整数或 null。")
     if config.per_device_train_batch_size <= 0:
         raise ValueError("`per_device_train_batch_size` 必须大于 0。")
     if config.gradient_accumulation_steps <= 0:

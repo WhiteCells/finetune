@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -43,6 +44,30 @@ from utils.seed import seed_everything
 TRAIN_CONFIG_PATH = Path("config/train.yaml")
 LORA_CONFIG_PATH = Path("config/lora.yaml")
 LOG_LEVEL = "INFO"
+
+
+def configure_cuda_device(gpu_id: int | None) -> None:
+    """限制训练进程仅使用指定的物理 CUDA 显卡。
+
+    ``CUDA_VISIBLE_DEVICES`` 必须在首次初始化 CUDA 前设置。设置后，指定的
+    物理显卡会在当前进程中显示为逻辑设备 ``cuda:0``，由 Trainer 自动使用。
+
+    Args:
+        gpu_id: 物理 CUDA 显卡编号；``None`` 时保持外部环境的设备可见性设置。
+
+    Raises:
+        RuntimeError: CUDA 已初始化，无法再安全修改可见设备时抛出。
+    """
+
+    if gpu_id is None:
+        return
+    if torch.cuda.is_initialized():
+        raise RuntimeError(
+            "CUDA 已初始化，无法应用 `gpu_id`。请在启动 Python 前设置 "
+            "CUDA_VISIBLE_DEVICES，或确保在任何 CUDA 调用前加载训练配置。"
+        )
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
 
 def initialize_logger(output_dir: str) -> tuple[Path, object]:
@@ -197,6 +222,7 @@ def train() -> None:
 
     train_config = load_train_config(TRAIN_CONFIG_PATH)
     lora_config = load_lora_config(LORA_CONFIG_PATH)
+    configure_cuda_device(train_config.gpu_id)
     validate_runtime_paths(train_config)
 
     output_dir, logger = initialize_logger(output_dir=train_config.output_dir)
