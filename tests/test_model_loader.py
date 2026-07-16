@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 try:
     from model.loader import model_dtype_kwarg_name
     from model.loader import resize_token_embeddings_if_needed
+    from model.loader import validate_attention_backend
 except ModuleNotFoundError as error:
     if error.name not in {"torch", "transformers"}:
         raise
     model_dtype_kwarg_name = None  # type: ignore[assignment]
     resize_token_embeddings_if_needed = None  # type: ignore[assignment]
+    validate_attention_backend = None  # type: ignore[assignment]
 
 
 class FakeEmbeddings:
@@ -51,6 +54,17 @@ class ModelLoaderTests(unittest.TestCase):
 
         self.assertEqual(model.resize_calls, [120])
         self.assertEqual(model.embeddings.num_embeddings, 120)
+
+    @unittest.skipUnless(validate_attention_backend is not None, "需要安装项目依赖")
+    def test_rejects_flash_attention_without_optional_dependency(self) -> None:
+        with patch("model.loader.is_flash_attn_2_available", return_value=False):
+            with self.assertRaisesRegex(RuntimeError, "flash-attn"):
+                validate_attention_backend("flash_attention_2")
+
+    @unittest.skipUnless(validate_attention_backend is not None, "需要安装项目依赖")
+    def test_allows_eager_attention_without_optional_dependency(self) -> None:
+        with patch("model.loader.is_flash_attn_2_available", return_value=False):
+            validate_attention_backend("eager")
 
 
 if __name__ == "__main__":

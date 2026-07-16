@@ -227,7 +227,6 @@ def run_inference(config: InferenceConfig) -> str:
     base_model = load_causal_lm(
         ModelLoadConfig(
             model_name_or_path=config.model_name_or_path,
-            gradient_checkpointing=False,
             use_cache=True,
             device_map="auto",
         )

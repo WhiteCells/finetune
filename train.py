@@ -256,7 +256,6 @@ def train() -> None:
             trust_remote_code=train_config.trust_remote_code,
             torch_dtype=train_config.torch_dtype,
             attn_implementation=train_config.attn_implementation,
-            gradient_checkpointing=train_config.gradient_checkpointing,
             use_cache=False,
             device_map=None,
         )

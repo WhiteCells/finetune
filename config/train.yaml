@@ -8,7 +8,7 @@ max_length: 2048
 system_prompt: "你是一个专业、可靠、简洁的中文助手。"
 use_fast_tokenizer: true
 trust_remote_code: true
-attn_implementation: "sdpa"
+attn_implementation: "eager"
 torch_dtype: "bfloat16"
 gpu_id: 0
 per_device_train_batch_size: 1

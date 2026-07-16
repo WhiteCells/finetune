@@ -88,6 +88,7 @@ class TrainConfigTests(unittest.TestCase):
         )
 
         self.assertEqual(training_args.warmup_steps, 0.03)
+        self.assertTrue(training_args.gradient_checkpointing)
 
     @unittest.skipUnless(build_training_arguments is not None, "需要安装项目依赖")
     def test_sets_tensorboard_logging_dir_environment(self) -> None:

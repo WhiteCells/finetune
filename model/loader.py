@@ -8,6 +8,7 @@ import torch
 from transformers import AutoModelForCausalLM
 from transformers import __version__ as transformers_version
 from transformers import PreTrainedModel
+from transformers.utils import is_flash_attn_2_available
 
 
 SUPPORTED_DTYPES: dict[str, torch.dtype | str] = {
@@ -31,7 +32,6 @@ class ModelLoadConfig:
         trust_remote_code: 是否允许 Transformers 加载自定义模型代码。
         torch_dtype: 目标 dtype，可传 `bf16`、`fp16`、`float32` 或 `auto`。
         attn_implementation: attention 实现，如 `sdpa`、`flash_attention_2`。
-        gradient_checkpointing: 是否启用梯度检查点。
         use_cache: 是否启用 KV cache。训练时通常应关闭，推理时开启。
         device_map: 可选设备映射；训练默认 `None`，推理可用 `auto`。
     """
@@ -41,7 +41,6 @@ class ModelLoadConfig:
     trust_remote_code: bool = True
     torch_dtype: str = "bfloat16"
     attn_implementation: str | None = "sdpa"
-    gradient_checkpointing: bool = False
     use_cache: bool = False
     device_map: str | dict[str, int | str] | None = None
 
@@ -75,6 +74,16 @@ def model_dtype_kwarg_name() -> str:
     return "torch_dtype"
 
 
+def validate_attention_backend(attn_implementation: str | None) -> None:
+    """在加载权重前检查可选 attention 后端是否可用。"""
+
+    if attn_implementation == "flash_attention_2" and not is_flash_attn_2_available():
+        raise RuntimeError(
+            "`flash_attention_2` 需要安装 `flash-attn` 并使用兼容的 CUDA/PyTorch "
+            "环境。当前环境未检测到可用后端；请安装并验证后再启用，或使用 `eager`。"
+        )
+
+
 def load_causal_lm(config: ModelLoadConfig) -> PreTrainedModel:
     """加载 Qwen3 因果语言模型。
 
@@ -83,8 +92,9 @@ def load_causal_lm(config: ModelLoadConfig) -> PreTrainedModel:
     1. 解析并设置目标 dtype。
     2. 加载基础模型。
     3. 关闭或开启 `use_cache`。
-    4. 训练场景下按需启用 gradient checkpointing。
-    5. 在需要时打开 input embedding 的梯度，以兼容 gradient checkpointing。
+
+    梯度检查点统一由 Trainer 在训练开始时启用，避免加载器与 Trainer
+    用不同参数重复配置同一个模型。
 
     Args:
         config: 模型加载配置。
@@ -94,6 +104,7 @@ def load_causal_lm(config: ModelLoadConfig) -> PreTrainedModel:
     """
 
     torch_dtype = resolve_torch_dtype(config.torch_dtype)
+    validate_attention_backend(config.attn_implementation)
 
     model_kwargs = {
         "pretrained_model_name_or_path": config.model_name_or_path,
@@ -110,11 +121,6 @@ def load_causal_lm(config: ModelLoadConfig) -> PreTrainedModel:
 
     # 训练时通常关闭 cache，避免额外显存占用并兼容 gradient checkpointing。
     model.config.use_cache = config.use_cache
-
-    if config.gradient_checkpointing:
-        # 先关闭 cache，再开启梯度检查点，是大模型训练的常见组合。
-        model.gradient_checkpointing_enable()
-        model.enable_input_require_grads()
 
     return model
 

@@ -755,16 +755,16 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "accelerate", specifier = ">=1.4.0" },
+    { name = "accelerate", specifier = "==1.14.0" },
     { name = "huggingface-hub", specifier = ">=0.33.0" },
     { name = "kernels", specifier = ">=0.12,<0.13" },
     { name = "numpy", specifier = ">=2.2.0" },
-    { name = "peft", specifier = ">=0.14.0" },
+    { name = "peft", specifier = "==0.19.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "safetensors", specifier = ">=0.5.3" },
     { name = "tensorboard", specifier = ">=2.18.0" },
-    { name = "torch", specifier = ">=2.6" },
-    { name = "transformers", specifier = ">=4.51.0" },
+    { name = "torch", specifier = "==2.12.1" },
+    { name = "transformers", specifier = "==5.12.1" },
 ]
 
 [[package]]
